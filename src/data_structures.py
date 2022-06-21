@@ -30,6 +30,7 @@ class ImageData:
     # Make list if  detecting more than one droplet per well is necessary
     droplet: Droplet = field(default=None)
     _filtered_image: np.ndarray = field(default=None)
+    _raw_image: np.ndarray = field(default=None)
 
     @property
     def filtered_image(self) -> np.ndarray:
@@ -46,7 +47,11 @@ class ImageData:
     @property
     def raw_image(self) -> np.ndarray:
         """ Load image from filepath (lazy loading for improved performance) """
-        return cv2.imread(self.filepath)
+        if isinstance(self._raw_image, np.ndarray):
+            return self._raw_image
+        else:
+            self._raw_image = cv2.imread(self.filepath)
+            return self._raw_image
 
     @property
     def gray_image(self) -> np.ndarray:
