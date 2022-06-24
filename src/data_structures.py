@@ -14,10 +14,11 @@ if TYPE_CHECKING:
 @dataclass()
 class Droplet:
     """ Data about the droplet """
-    center_x: int
-    center_y: int
-    radius: int
+    x: int
+    y: int
+    r: int
     phase_separation: bool = False
+    num_edges: int = None
 
 
 @dataclass()
@@ -27,13 +28,37 @@ class ImageData:
     well_number: int
     timestamp: datetime.datetime
     params: Parameters
-    # Make list if  detecting more than one droplet per well is necessary
+    # Make list if detecting more than one droplet per well is necessary
     droplet: Droplet = field(default=None)
-    _filtered_image: np.ndarray = field(default=None)
+    # Declare arrays here only if memory is not constrained
+    # otherwise lazy load them from disk when needed
+    # NOTE: Only use @property if needed, it is approx 40ns slower
     _raw_image: np.ndarray = field(default=None)
+    _gray_image: np.ndarray = field(default=None)
+    _filtered_image: np.ndarray = field(default=None)
+
+    @property
+    def raw_image(self) -> np.ndarray:
+        """ Load image from filepath (lazy loading for improved performance) """
+        if not isinstance(self._raw_image, np.ndarray):
+            self._raw_image = cv2.imread(self.filepath)
+        return self._raw_image
+
+    @property
+    def gray_image(self) -> np.ndarray:
+        """ Convert image to grayscale, can also do additional pre-processing """
+        if not isinstance(self._gray_image, np.ndarray):
+            self._gray_image = cv2.convertScaleAbs(
+                cv2.cvtColor(self.raw_image, cv2.COLOR_BGR2GRAY),
+                alpha=self.params.alpha,
+                beta=self.params.beta
+            )
+        return self._gray_image
 
     @property
     def filtered_image(self) -> np.ndarray:
+        if not isinstance(self._filtered_image, np.ndarray):
+            raise Exception("Filtered image not set")
         return self._filtered_image
 
     @filtered_image.setter
@@ -45,24 +70,9 @@ class ImageData:
             self._filtered_image = image
 
     @property
-    def raw_image(self) -> np.ndarray:
-        """ Load image from filepath (lazy loading for improved performance) """
-        if isinstance(self._raw_image, np.ndarray):
-            return self._raw_image
-        else:
-            self._raw_image = cv2.imread(self.filepath)
-            return self._raw_image
-
-    @property
-    def gray_image(self) -> np.ndarray:
-        """ Convert image to grayscale, can also do additional pre-processing """
-        gray = cv2.cvtColor(self.raw_image, cv2.COLOR_BGR2GRAY)
-        gray = cv2.convertScaleAbs(gray, alpha=self.params.alpha, beta=self.params.beta)
-        return gray
-
-    @property
     def adjusted_gray_image(self) -> np.ndarray:
         """ Adjust brightness and contrast """
+        # Do something
         return self.gray_image
 
     @property
@@ -71,11 +81,10 @@ class ImageData:
         scale = self.params.first_derivate_scale
         delta = self.params.first_derivate_delta
         ddepth = cv2.CV_16S
-        gray_image = self.gray_image
 
-        grad_x = cv2.Sobel(gray_image, ddepth, 1, 0, ksize=3, scale=scale, delta=delta,
+        grad_x = cv2.Sobel(self.gray_image, ddepth, 1, 0, ksize=3, scale=scale, delta=delta,
                            borderType=cv2.BORDER_DEFAULT)
-        grad_y = cv2.Sobel(gray_image, ddepth, 0, 1, ksize=3, scale=scale, delta=delta,
+        grad_y = cv2.Sobel(self.gray_image, ddepth, 0, 1, ksize=3, scale=scale, delta=delta,
                            borderType=cv2.BORDER_DEFAULT)
 
         abs_grad_x = cv2.convertScaleAbs(grad_x)

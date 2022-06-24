@@ -1,4 +1,10 @@
-from typing import Tuple
+from __future__ import annotations
+
+import datetime
+from typing import Tuple, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from data_structures import ImageData
 
 import numpy as np
 
@@ -40,5 +46,14 @@ class LLPSDetection:
     def has_phase_separated(self, **kwargs) -> bool:
         pass
 
-    def time_point_of_phase_separation(self, **kwargs) -> float:
+    def number_edges_in_droplet(self, **kwargs) -> int:
         pass
+
+    @staticmethod
+    def time_point_of_phase_separation(images: List[ImageData], edge_delta: float) -> datetime.datetime:
+        time_point = None
+        for idx in range(len(images) - 1):
+            if (images[idx + 1].droplet.num_edges - images[idx].droplet.num_edges) > edge_delta:
+                time_point = images[idx + 1].timestamp
+                break
+        return time_point

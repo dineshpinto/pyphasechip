@@ -1,13 +1,13 @@
-import datetime
-import re
-from typing import Tuple
+import os.path
 
 
-def extract_metadata_from_filename(filename: str) -> Tuple[int, datetime.datetime]:
-    match = re.search('\d{1-100}', filename)
-    if match:
-        print(match.group())
-        well_number = int(match.group()[0])
-        timestamp = datetime.datetime.now()
-        return well_number, timestamp
-    return 0, datetime.datetime.now()
+def get_sorted_filepaths_from_folder(folder_path: str, ext: str) -> list:
+    file_paths = []
+
+    for file in os.listdir(folder_path):
+        if os.path.splitext(file)[1] == ext:
+            file_paths.append(os.path.join(folder_path, file))
+
+    file_paths.sort(key=lambda f: os.path.getmtime(f))
+
+    return file_paths
