@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 
 if TYPE_CHECKING:
-    from main import Parameters
+    from parameters import Parameters
 
 
 @dataclass()
@@ -36,6 +36,8 @@ class ImageData:
     _raw_image: np.ndarray = field(default=None)
     _gray_image: np.ndarray = field(default=None)
     _filtered_image: np.ndarray = field(default=None)
+
+    # raw image -> gray image -> filtered image -> image operations (first derivative etc.)
 
     @property
     def raw_image(self) -> np.ndarray:
@@ -68,28 +70,3 @@ class ImageData:
             raise ValueError(f"Image sizes don't match {image.size} != {self.params.image_shape}")
         else:
             self._filtered_image = image
-
-    @property
-    def adjusted_gray_image(self) -> np.ndarray:
-        """ Adjust brightness and contrast """
-        # Do something
-        return self.gray_image
-
-    @property
-    def first_derivative_image(self) -> np.ndarray:
-        """ Take first derivative of image """
-        scale = self.params.first_derivate_scale
-        delta = self.params.first_derivate_delta
-        ddepth = cv2.CV_16S
-
-        grad_x = cv2.Sobel(self.gray_image, ddepth, 1, 0, ksize=3, scale=scale, delta=delta,
-                           borderType=cv2.BORDER_DEFAULT)
-        grad_y = cv2.Sobel(self.gray_image, ddepth, 0, 1, ksize=3, scale=scale, delta=delta,
-                           borderType=cv2.BORDER_DEFAULT)
-
-        abs_grad_x = cv2.convertScaleAbs(grad_x)
-        abs_grad_y = cv2.convertScaleAbs(grad_y)
-
-        grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
-
-        return grad
